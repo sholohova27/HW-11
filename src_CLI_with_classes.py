@@ -59,9 +59,9 @@ def add_func(*args, **kwargs):
 # contacts делается экземпляром класса в мейне
     contacts = kwargs['contacts']
     name = Name(args[0].strip().lower())
-    phone = [Phone(phone.strip().lower()) for phone in args[1:]]
+    phones = [Phone(phone.strip().lower()) for phone in args[1:]]
 # создаем новую переменную rec, чтобы работать с классом Record
-    rec = Record(name, phone)
+    rec = Record(name, phones)
     try:
 # Забираем первый и второй элемент, т.к. ф-я handler, которую вызываем в мейне,
 # возвращает ф-ю и очищенный от команды список, к-й распаковывается через * в
@@ -75,7 +75,7 @@ def add_func(*args, **kwargs):
             return f'{name} already exists. Use "change" command to change number', contacts
     except AttributeError:
         pass
-    return f"Contact {name} with phone {phone} successfully added", contacts
+    return f"Contact {name} with phone {phones} successfully added", contacts
 
 @Index_Key_error_func
 def change_func(*args, **kwargs):
@@ -92,7 +92,8 @@ def change_func(*args, **kwargs):
     # если имени нет в словаре, оно добавится, если нет - поменяется номер
     # contacts[name] = new_phone
     # метод edit_phone у нас для списка, мы извлекаем список по ключу словаря
-    if name in [str(Name(key)) for key in contacts.keys()]:
+    # if name in [str(Name(key)) for key in contacts.keys()]: # невже це зручно читати?)))
+    if contacts.get(str(name)):
         contacts.get(str(name)).edit_phone(old_phone, new_phone)
     # rec = contacts.get(str(name))
     # без str не работает, либо rec = contacts.get(name.value)
