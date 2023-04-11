@@ -33,6 +33,15 @@ class Name(Field):
 class Phone(Field):
     pass
 
+# class RecordsNum:
+#     def __init__(self, int_value):
+#         self.int_value = int_value
+#         # if not isinstance(int_value, int):
+#         #     raise ValueError("Value must be integer")
+#         # else:
+
+
+
 
 # добавление/удаление/редактирование
 class Record:
@@ -45,7 +54,7 @@ class Record:
         return f"Contact {self.name} with {phone} phone number has been added"
 
     def del_phone(self, phone: Phone):
-        if phone in self.phones:
+        for phone in self.phones:
             self.phones.remove(phone)
             return f"Phone number {phone} has been deleted from contact {self.name}"
         return f'{phone} not in list'

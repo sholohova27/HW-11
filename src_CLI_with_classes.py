@@ -92,7 +92,6 @@ def change_func(*args, **kwargs):
     # если имени нет в словаре, оно добавится, если нет - поменяется номер
     # contacts[name] = new_phone
     # метод edit_phone у нас для списка, мы извлекаем список по ключу словаря
-    # if name in [str(Name(key)) for key in contacts.keys()]: # невже це зручно читати?)))
     if contacts.get(str(name)):
         contacts.get(str(name)).edit_phone(old_phone, new_phone)
     # rec = contacts.get(str(name))
@@ -124,8 +123,22 @@ def phone_func(*args, **kwargs):
     return str(contacts.get(str(name))), contacts
 
 
-
-def show_all_func(*args, **kwargs):
+def Paginator_func(func):
+    def inner(*args, **kwargs):
+        contacts = kwargs['contacts']
+        if len(args) > 0 and int(args[0].strip()):
+            records_num = int(args[0].strip())
+            start = 0
+            show_keys = list(contacts)[start: start + records_num]
+            show_values = [contacts.get(key) for key in show_keys]
+            yield f'{show_keys}:{show_values}'
+            start += records_num
+        return '\n'.join([f'{name} : {phone}' for name, phone in contacts.items()]), \
+               contacts
+    return inner
+#
+@Paginator_func
+def show_func(*args, **kwargs):
     contacts = kwargs['contacts']
     return '\n'.join([f'{name} : {phone}' for name, phone in contacts.items()]), \
            contacts
@@ -162,7 +175,7 @@ MODES = {"hello": hello_func,
          "help": help_func,
          "delete": del_func,
          "phone": phone_func,
-         "show all": show_all_func,
+         "show": show_func,
          "close": exit_func,
          "exit": exit_func,
          "bye": exit_func,
