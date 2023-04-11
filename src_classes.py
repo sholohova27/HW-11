@@ -18,7 +18,7 @@ class Field:
 
     # obj.value -> AttributeError, хотя так писать правильнее
     def __eq__(self, obj):
-        return self.value == obj
+        return self.value == obj.value
 
     def __hash__(self):
         return hash(self.value)
@@ -36,28 +36,26 @@ class Phone(Field):
 
 # добавление/удаление/редактирование
 class Record:
-    def __init__(self, name: Name, phone: Phone = None):
+    def __init__(self, name: Name, phones: list[Phone] = None):
         self.name = name
-        self.phones = [phone] if phone else []
+        self.phones = phones
 
     def add_phone(self, phone: Phone):
         self.phones.append(phone)
         return f"Contact {self.name} with {phone} phone number has been added"
 
     def del_phone(self, phone: Phone):
-        for p in self.phones:
-            if p == phone:
-                self.phones.remove(p)
-                return f"Phone number {phone} has been deleted from contact {self.name}"
+        if phone in self.phones:
+            self.phones.remove(phone)
+            return f"Phone number {phone} has been deleted from contact {self.name}"
         return f'{phone} not in list'
 
     def edit_phone(self, old_phone: Phone, new_phone: Phone):
-        try:
-            index = self.phones.index(old_phone)
-            self.phones[index] = new_phone
+        if old_phone in self.phones:
+            self.del_phone(old_phone)
+            self.add_phone(new_phone)
             return f"Phone number {old_phone} has been substituted with {new_phone} for contact {self.name}"
-        except ValueError:
-            return f'{old_phone} not in list'
+        return f'{old_phone} not in list'
 
     def __str__(self):
         return f'{self.phones}'
