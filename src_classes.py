@@ -1,4 +1,5 @@
 from collections import UserDict
+from datetime import datetime
 
 
 # родительский
@@ -33,21 +34,33 @@ class Name(Field):
 class Phone(Field):
     pass
 
-# class RecordsNum:
-#     def __init__(self, int_value):
-#         self.int_value = int_value
-#         # if not isinstance(int_value, int):
-#         #     raise ValueError("Value must be integer")
-#         # else:
 
+class Birthday(Field):
+    def __init__(self, bday=None):
+# скрытое поле нужно для геттеров/сеттеров, чтобы не уйти в рекурсию
+        self.__bday = None
+        self.bday = bday
 
+# геттер для поля bday, в этоу ветку он пойдет, если будут соблюдены условия в сеттере
+    @property
+    def bday(self):
+        return f'{self.__bday}'
 
+# сеттер для поля bday !!! Вводится новое для класса поле value
+    @bday.setter
+    def bday(self, value):
+        try:
+            datetime.strptime(value, '%d %B %Y')
+            self.__bday = value
+        except ValueError:
+            raise ValueError(f'Write birthday in format like "27 August 1987"') from None
 
-# добавление/удаление/редактирование
+    # добавление/удаление/редактирование
 class Record:
-    def __init__(self, name: Name, phones: list[Phone] = None):
+    def __init__(self, name: Name, phones: list[Phone] = None, bday = None):
         self.name = name
         self.phones = phones
+        self.bday = bday
 
     def add_phone(self, phone: Phone):
         self.phones.append(phone)
@@ -66,11 +79,31 @@ class Record:
             return f"Phone number {old_phone} has been substituted with {new_phone} for contact {self.name}"
         return f'{old_phone} not in list'
 
+    def days_to_birthday(self, bday:Birthday):
+        bday = datetime.strptime(bday, '%d %B %Y')
+        now = datetime.now()
+        bday_day = bday.day
+        bday_month = bday.month
+        bday_year = bday.year
+        bday_cur_Y = datetime(year = now.year, month = bday_month, day = bday.day)
+        diff = bday_cur_Y - now
+        if (bday_cur_Y - now).days >= 0:
+            diff = bday_cur_Y - now
+        if (bday_cur_Y - now).days < 0:
+            bday_next_Y = datetime(year = now.year + 1, month = bday_month, day = bday.day)
+            diff = bday_next_Y - now
+        return f'{diff.days} days left to your birthday'
+
+
     def __str__(self):
         return f'{self.phones}'
 
+    def __repr__(self):
+        return str(self)
 
-# name1 = Record("Nataly", "+34")
+# Nata_bd = Birthday('27 August 1987')
+# name1 = Record("Nataly", ["+34"])
+# print(name1.days_to_birthday("27 August 1987"))
 # print(name1.add_phone("44"))
 # print(name1.phones)
 # name2 = Name('Andrew')
@@ -105,23 +138,20 @@ class AddressBook(UserDict):
         except KeyError:
             return f'Contact {name} is absent'
 
+    def paginator(self, records_num):
+        start = 0
+        while True:
+            # превращаем в список ключи словаря и слайсим
+            result_keys = list(self.data)[start: start + records_num]
+            # превращаем список ключей словаря в список строк с форматом "ключ : [значение]"
+            result_list = [f"{key} : {self.data.get(key)}" for key in result_keys]
+            if not result_keys:
+                break
+            yield '\n'.join(result_list)
+            start += records_num
 
-# contacts = AddressBook()
-# record1 = Record('Jina', '+37')
-# record1.add_phone('44')
-# print(contacts.add_record(record1))
-# print(contacts.show_all())
-# print(contacts.phone('Jia'))
+    def __repr__(self):
+        return str(self)
 
 
-if __name__ == '__main__':
-    name = Name("Nataly")
-    phone = Phone("+095")
 
-    name1 = Record(name, phone)
-
-    # print(name1.phones)
-    #
-    print(name1.add_phone(Phone("+555")))
-
-    print(name1)
