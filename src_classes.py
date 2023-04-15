@@ -30,13 +30,27 @@ class Name(Field):
     pass
 
 
-# поле с телефоном
+# поле с телефоном (отказалась от наследования, т.к. были ошибки
 class Phone(Field):
-    pass
+    def __init__(self, phone = None):
+        super().__init__(phone)
+        self.__phone = None
+        self.phone = phone
+
+    @property
+    def phone(self):
+        return self.__phone
+
+    @phone.setter
+    def phone(self, value):
+        if len(value) <= 5:
+            raise ValueError('Phone number must have more then 5 digits')
+        self.__phone = value
 
 
 class Birthday(Field):
     def __init__(self, bday=None):
+        super().__init__(bday)
 # скрытое поле нужно для геттеров/сеттеров, чтобы не уйти в рекурсию
         self.__bday = None
         self.bday = bday
@@ -108,7 +122,7 @@ class Record:
 # print(name1.phones)
 # name2 = Name('Andrew')
 # print(name2)
-# phone2 = Phone('+096')
+# phone2 = Phone('0956985211')
 # print(phone2)
 # record2 = Record(name2, phone2)
 # print(record2.phones)
@@ -126,8 +140,8 @@ class AddressBook(UserDict):
         # data - поле UserDict
         # т.к. в классе Name есть маг. метод __str__, можно просто record.name
         # добавили value и-за проблем с сериализацией
-        self.data[record.name.value] = record
-        return f'{record.name.value} with {record.phones} phone is successfully added in contacts'
+        self.data[record.name.value] = [record.phones, record.bday]
+        return f'{record.name.value} with {record.phones} phone and birthday {record.bday}  is successfully added in contacts'
 
     def show_all(self):
         return self.data

@@ -1,7 +1,8 @@
 import json
 # эта ошибка возникала при пустом файле contacts.json, ментор посоветовал импортировать ее явно
 from json.decoder import JSONDecodeError
-from src_classes import Name, Phone, Record, AddressBook
+import re
+from src_classes import Name, Phone, Record, Birthday, AddressBook
 
 
 
@@ -23,7 +24,7 @@ def save_contacts(file_name, contacts):
             json.dump(contacts, f)
 
 
-def Index_Key_error_func(func):
+def Error_func(func):
     def inner(*args, **kwargs):
         name = Name(args[0].strip().lower())
         contacts = AddressBook(kwargs['contacts'])
@@ -34,6 +35,10 @@ def Index_Key_error_func(func):
             return f'Print name and phone/s number via space', contacts
         except KeyError:
             return f'Contact {name} is absent', contacts
+        except TypeError:
+            return f'{name} already exists.', contacts
+        except AttributeError:
+            ...
     return inner
 
 # contacts возвращаем для того, чтобы сигнатура ф-й была одинаковая,
@@ -55,33 +60,47 @@ def help_func(*args, **kwargs):
 
 
 # передаем словарь Contacts из ф-и main в качестве аргумента
-@Index_Key_error_func
+@Error_func
 def add_func(*args, **kwargs):
-# делаем наши переменные объектами соответствующих классов
-# и переносим их с блока try в начало ф-и
-# contacts делается экземпляром класса в мейне
+    # делаем наши переменные объектами соответствующих классов
+    # и переносим их с блока try в начало ф-и
+    # contacts делается экземпляром класса в мейне
     contacts = kwargs['contacts']
-    # global name
     name = Name(args[0].strip().lower())
-    phones = [Phone(phone.strip().lower()) for phone in args[1:]]
-# создаем новую переменную rec, чтобы работать с классом Record
-    rec = Record(name, phones)
-    try:
-# Забираем первый и второй элемент, т.к. ф-я handler, которую вызываем в мейне,
-# возвращает ф-ю и очищенный от команды список, к-й распаковывается через * в
-# позиционные параметры add_funс (в мейне): result, contacts = func(*text, Contacts=Contacts)
-# без маг. метода hash в классе тут будет ошибка
-        if not contacts.get(name):
-# вместо contacts[name] = phone присваиваем метод класса AddressBook
-            contacts.add_record(rec)
-            # contacts[name] = phone
-        else:
-            return f'{name} already exists. Use "change" command to change number', contacts
-    except AttributeError:
-        pass
-    return f"Contact {name} with phone {phones} successfully added", contacts
+    phones = []
+    bday = None
+    for arg in args[1:]:
+        if len(arg)>5:
+            match_phone = re.findall(r'\b\+?\d{1,3}-?\d{1,3}-?\d{1,4}\b', str(arg))
+            if match_phone:
+                phones.extend([Phone(phone.strip().lower()) for phone in match_phone])  # создаем экземпляры класса Phone из match_phone и добавляем их в список phones
+        match_bd = re.search(
+            r'\b(\d{1,2})\s(January|February|March|April|May|June|July|August|September|October|November|December)\s(\d{4})\b',
+            ' '.join(args[1:]), re.IGNORECASE)
+    if match_bd:
+        bday = f"{match_bd.group(1)} {match_bd.group(2)} {match_bd.group(3)}"
+    # создаем новые переменные rec, phones и bday, чтобы работать с классом Record
+    rec = Record(name, phones, bday)
+    # Забираем первый и второй элемент, т.к. ф-я handler, которую вызываем в мейне,
+    # возвращает ф-ю и очищенный от команды список, к-й распаковывается через * в
+    # позиционные параметры add_func (в мейне): result, contacts = func(*text, Contacts=Contacts)
+    # без маг. метода hash в классе тут будет ошибк, без str не работает!
+    if not contacts.get(str(name)):
+        contacts.add_record(rec)
+        return f"Contact {name} with phone {phones} and birthday '{bday}' successfully added", contacts
+    # вместо contacts[name] = phone присваиваем метод класса AddressBook
+    # contacts[name] = phone
+    return f'Contact {name} already exists.', contacts
 
-@Index_Key_error_func
+
+
+
+
+
+
+
+
+@Error_func
 def change_func(*args, **kwargs):
     contacts = kwargs['contacts']
 # Забираем первый и второй элемент, т.к. ф-я handler, которую вызываем в мейне,
@@ -109,7 +128,7 @@ def change_func(*args, **kwargs):
 
 
 
-@Index_Key_error_func
+@Error_func
 def del_func(*args, **kwargs):
     contacts = kwargs['contacts']
 # Забираем первый и второй элемент, т.к. ф-я handler, которую вызываем в мейне,
@@ -120,8 +139,14 @@ def del_func(*args, **kwargs):
     contacts.pop(str(name))
     return f"Contact {name} successfully deleted", contacts
 
-@Index_Key_error_func
+@Error_func
 def phone_func(*args, **kwargs):
+    contacts = kwargs['contacts']
+    name = Name(args[0].strip().lower())
+    return str(contacts.get(str(name))), contacts
+
+@Error_func
+def bday_func(*args, **kwargs):
     contacts = kwargs['contacts']
     name = Name(args[0].strip().lower())
     return str(contacts.get(str(name))), contacts
@@ -135,10 +160,11 @@ def show_func(*args, **kwargs):
             for record in contacts.paginator(records_num):
                 return record, contacts
         except ValueError:
-            return '\n'.join([f'{name} : {phone}' for name, phone in contacts.items()]), \
-                   contacts
-    return '\n'.join([f'{name} : {phone}' for name, phone in contacts.items()]), \
-           contacts
+            return contacts
+            # return '\n'.join([f'{name} : {phone}, {bday}' for name, phone in contacts.items()]), \
+            #        contacts
+    return contacts
+
 
 
 def unknown_command(*args, **kwargs):
@@ -191,11 +217,11 @@ def main(file_name):
         # вместо исходного словаря результат выполнения ф-ций
         result, contacts = func(*text, contacts = contacts)
         print(result)
-        name = text[0]
         if func == exit_func:
-            save_contacts(file_name, {name:contacts[name].__dict__})
+            result = {"contacts": [{str(r.name): {"phones": [str(phone) for phone in r.phones],
+                                                  "birthday": r.bday} for r in contacts.values()}]}
+            save_contacts(file_name, result)
             break
-
 
 
 
