@@ -164,8 +164,17 @@ class AddressBook(UserDict):
             yield '\n'.join(result_list)
             start += records_num
 
+    def to_dict(self):
+        contacts_dict = {}
+        for key, value in self.contacts.items():
+            contacts_dict[key] = {"phones": [str(phone) for phone in value.phones], "birthday": value.bday}
+        return contacts_dict
+
     def __repr__(self):
         return str(self)
+
+    def __str__(self) -> str:
+        return '\n'.join([str(r) for r in self.values()])
 
 
 

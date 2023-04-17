@@ -36,7 +36,7 @@ def Error_func(func):
         except KeyError:
             return f'Contact {name} is absent', contacts
         except TypeError:
-            return f'{name} already exists.', contacts
+            return f'{name} already exists or vice versa', contacts
         except AttributeError:
             ...
     return inner
@@ -53,7 +53,8 @@ def help_func(*args, **kwargs):
                For adding Contacts type "add"
                To change Contacts type "change"
                To get Contact`s phone number type "phone" and Contact`s name after
-               To get all Contacts "show all"
+               To get Contact`s birthday type "bd" and Contact`s name after
+               To get all Contacts type "show all/show", to get n records, type "show n"
                To delete Contact type "delete"
                To exit type "bye"/"close"/"exit"/"." 
             ''', contacts
@@ -69,16 +70,15 @@ def add_func(*args, **kwargs):
     name = Name(args[0].strip().lower())
     phones = []
     bday = None
-    for arg in args[1:]:
-        if len(arg)>5:
-            match_phone = re.findall(r'\b\+?\d{1,3}-?\d{1,3}-?\d{1,4}\b', str(arg))
-            if match_phone:
-                phones.extend([Phone(phone.strip().lower()) for phone in match_phone])  # создаем экземпляры класса Phone из match_phone и добавляем их в список phones
-        match_bd = re.search(
-            r'\b(\d{1,2})\s(January|February|March|April|May|June|July|August|September|October|November|December)\s(\d{4})\b',
-            ' '.join(args[1:]), re.IGNORECASE)
-    if match_bd:
-        bday = f"{match_bd.group(1)} {match_bd.group(2)} {match_bd.group(3)}"
+    if args[1:]:
+        for arg in args[1:]:
+            if len(arg)>5:
+                match_phone = re.findall(r'\b\+?\d{1,3}-?\d{1,3}-?\d{1,4}\b', str(arg))
+                if match_phone:
+                    phones.extend([Phone(phone.strip().lower()) for phone in match_phone])  # создаем экземпляры класса Phone из match_phone и добавляем их в список phones
+            match_bd = re.search(r'\b(\d{1,2})\s(January|February|March|April|May|June|July|August|September|October|November|December)\s(\d{4})\b',' '.join(args[1:]), re.IGNORECASE)
+            if match_bd:
+                bday = f"{match_bd.group(1)} {match_bd.group(2)} {match_bd.group(3)}"
     # создаем новые переменные rec, phones и bday, чтобы работать с классом Record
     rec = Record(name, phones, bday)
     # Забираем первый и второй элемент, т.к. ф-я handler, которую вызываем в мейне,
@@ -94,12 +94,6 @@ def add_func(*args, **kwargs):
 
 
 
-
-
-
-
-
-
 @Error_func
 def change_func(*args, **kwargs):
     contacts = kwargs['contacts']
@@ -109,6 +103,7 @@ def change_func(*args, **kwargs):
     name = Name(args[0].strip().lower())
     #old_phone = contacts.get(name) Це буде не old_phone, а екземпляр Record
     # contacts[name] = ""
+    phones = contacts.get(str(name))[0]
     old_phone = Phone(args[1].strip().lower()) # буде на першій позиції в аргсах
     new_phone = Phone(args[2].strip().lower()) # буде на другій позиції в аргсах
     # rec = Record(name,new_phone) екземпляр Record потрібно дістати з книги контактів
@@ -116,7 +111,7 @@ def change_func(*args, **kwargs):
     # contacts[name] = new_phone
     # метод edit_phone у нас для списка, мы извлекаем список по ключу словаря
     if contacts.get(str(name)):
-        contacts.get(str(name)).edit_phone(old_phone, new_phone)
+        Record(name, phones).edit_phone(old_phone, new_phone)
     # rec = contacts.get(str(name))
     # без str не работает, либо rec = contacts.get(name.value)
     # if rec:
@@ -143,13 +138,16 @@ def del_func(*args, **kwargs):
 def phone_func(*args, **kwargs):
     contacts = kwargs['contacts']
     name = Name(args[0].strip().lower())
-    return str(contacts.get(str(name))), contacts
+    return str(contacts.get(str(name))[0]), contacts
 
 @Error_func
 def bday_func(*args, **kwargs):
     contacts = kwargs['contacts']
     name = Name(args[0].strip().lower())
-    return str(contacts.get(str(name))), contacts
+    bd = str(Birthday(contacts.get(str(name))[1]))
+# метод применяем к экземпляру класса
+    days_to_bd = Record(name, bd).days_to_birthday(bd)
+    return (bd, days_to_bd),contacts
 
 
 def show_func(*args, **kwargs):
@@ -160,10 +158,11 @@ def show_func(*args, **kwargs):
             for record in contacts.paginator(records_num):
                 return record, contacts
         except ValueError:
-            return contacts
-            # return '\n'.join([f'{name} : {phone}, {bday}' for name, phone in contacts.items()]), \
-            #        contacts
-    return contacts
+            return contacts, contacts
+    #         for record in contacts.paginator(len(contacts)):
+    #             return record, contacts
+    # for record in contacts.paginator(len(contacts)):
+    return contacts, contacts
 
 
 
@@ -198,6 +197,7 @@ MODES = {"hello": hello_func,
          "help": help_func,
          "delete": del_func,
          "phone": phone_func,
+         "bd": bday_func,
          "show": show_func,
          "close": exit_func,
          "exit": exit_func,
@@ -218,9 +218,9 @@ def main(file_name):
         result, contacts = func(*text, contacts = contacts)
         print(result)
         if func == exit_func:
-            result = {"contacts": [{str(r.name): {"phones": [str(phone) for phone in r.phones],
-                                                  "birthday": r.bday} for r in contacts.values()}]}
-            save_contacts(file_name, result)
+            # result = {"contacts": [{str(r.name): {"phones": [str(phone) for phone in r.phones],
+            #                                       "birthday": r.bday} for r in contacts.values()}]}
+            save_contacts(file_name, contacts.to_dict())
             break
 
 
